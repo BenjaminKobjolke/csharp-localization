@@ -88,6 +88,52 @@ List<LanguageInfo> languages = localization.GetAvailableLanguages();
 // - Name: "English", "Deutsch", etc. (from _meta_.language_name in JSON)
 ```
 
+### WinForms ComboBox Binding
+
+When binding `GetAvailableLanguages()` to a WinForms ComboBox with `DataSource`, set the selection in the `Form.Shown` event, not the constructor. The ComboBox isn't fully initialized until the form is displayed.
+
+```csharp
+private string _pendingLanguageSelection;
+
+public Form1()
+{
+    InitializeComponent();
+
+    // Setup ComboBox - set DisplayMember/ValueMember BEFORE DataSource
+    cmbLanguage.DisplayMember = "Name";
+    cmbLanguage.ValueMember = "Code";
+    cmbLanguage.DataSource = _localization.GetAvailableLanguages();
+
+    // Store saved language for later
+    _pendingLanguageSelection = savedLanguageCode ?? _localization.CurrentLanguage;
+
+    this.Shown += Form1_Shown;
+}
+
+private void Form1_Shown(object sender, EventArgs e)
+{
+    // Now ComboBox is ready - set selection
+    var languages = cmbLanguage.DataSource as System.Collections.IList;
+    if (languages != null)
+    {
+        for (int i = 0; i < languages.Count; i++)
+        {
+            dynamic lang = languages[i];
+            if (lang?.Code == _pendingLanguageSelection)
+            {
+                cmbLanguage.SelectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    // Attach change handler AFTER setting initial selection
+    cmbLanguage.SelectedIndexChanged += CmbLanguage_SelectedIndexChanged;
+}
+```
+
+**Note:** Attach the `SelectedIndexChanged` handler after setting the initial selection to avoid triggering saves during initialization.
+
 ### Multiple Translation Paths
 
 ```csharp
